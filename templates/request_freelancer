@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Request a Freelancer</title>
+</head>
+<body>
+    <h1>Request a Freelancer</h1>
+    <a href="/">Home</a>
+
+    <form method="POST">
+        <label for="request">Request Description:</label>
+        <textarea id="request" name="request" required></textarea>
+        <button type="submit">Submit Request</button>
+    </form>
+    
+    <h2>Requests:</h2>
+    <ul>
+        {% for req in requests %}
+            <li>{{ req }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

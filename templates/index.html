@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Freelance Site</title>
+</head>
+<body>
+    <h1>Welcome to Freelance Site</h1>
+    <a href="/freelancers">View Freelancers</a>
+    <a href="/request_freelancer">Request a Freelancer</a>
+    
+    <h2>Available Freelancers:</h2>
+    <ul>
+        {% for freelancer in freelancers %}
+            <li>{{ freelancer.name }} - Skills: {{ freelancer.skills }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
