@@ -4,54 +4,60 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Needed for flashing messages
 
-# In-memory storage for freelancers and requests
 freelancers = []
-requests_list = []
 
-# Mock TNID verification function
-def verify_tnid(tnid):
-    # Simulate an API call to verify TNID
-    # Replace this with the actual API call
-    # response = requests.get(f'http://tnid-verification-api.com/verify/{tnid}')
-    # return response.json().get('is_valid', False)
-    
-    # For demonstration, let's assume all TNIDs ending with '1' are valid
-    return tnid.endswith('1')
+# Your API key
+api_key = '' 
+
+# Function to verify TNID
+def verify_tnid(freelancer_data):
+    url = 'https://api.tnid.com/verify' 
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=freelancer_data)
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('verified'):
+                print('Freelancer is verified')
+                return True
+            else:
+                print('Verification failed:', data.get('reason'))
+                return False
+        else:
+            print('Error:', response.status_code, response.text)
+            return False
+    except requests.exceptions.RequestException as e:
+        print('Request failed:', e)
+        return False
 
 @app.route('/')
 def index():
     return render_template('index.html', freelancers=freelancers)
 
-@app.route('/request_freelancer', methods=['GET', 'POST'])
-def request_freelancer():
-    if request.method == 'POST':
-        req = request.form.get('request')
-        requests_list.append(req)
-        return redirect(url_for('index'))
-    return render_template('request_freelancer.html')
-
-@app.route('/add_freelancer', methods=['GET', 'POST'])
+@app.route('/add_freelancer', methods=['POST'])
 def add_freelancer():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        skills = request.form.get('skills')
-        tnid = request.form.get('tnid')
+    name = request.form.get('name')
+    skills = request.form.get('skills')
+    tnid = request.form.get('tnid')
+    
+    freelancer_data = {
+        'name': name,
+        'tnid': tnid,
+        # Add other necessary fields for verification here
+    }
 
-        if verify_tnid(tnid):
-            freelancers.append({'name': name, 'skills': skills, 'tnid': tnid})
-            flash('Freelancer registered successfully!', 'success')
-            return redirect(url_for('index'))
-        else:
-            flash('Invalid TNID. Please try again.', 'error')
-
-    return render_template('request_freelancer.html')
-
-@app.route('/freelancers')
-def freelancers_page():
-    return render_template('freelancers.html', freelancers=freelancers)
+    if verify_tnid(freelancer_data):
+        freelancers.append({'name': name, 'skills': skills})
+        flash('Freelancer registered successfully!', 'success')
+    else:
+        flash('Invalid TNID. Please try again.', 'error')
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
-
