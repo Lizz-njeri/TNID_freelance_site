@@ -1,39 +1,78 @@
 import requests
 from flask import Flask, render_template, request, redirect, url_for, flash
-
+import aiohttp
+from gql import gql, Client
+from gql.transport.aiohttp import AIOHTTPTransport
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Needed for flashing messages
 
+app.secret_key = 'b21wYW55X2lkIjoiM2EwNWQzYWEtZj'  
+ 
 freelancers = []
+api_key =''
 
-# Your API key
-api_key = '' 
 
-# Function to verify TNID
-def verify_tnid(freelancer_data):
-    url = 'https://api.tnid.com/verify' 
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
+
+def search_people(bearer_token, freelancer_data, query_name = None, email = None, phone_number = None):
+    transport = AIOHTTPTransport(
+        url="https://api.staging.v2.tnid.com/Reni",
+        headers=
+        {
+            "Authorization": f"Bearer {bearer_token}"
+        }
+    )
+
+    # Create a GraphQL client using the defined transport
+    client = Client(transport=transport, fetch_schema_from_transport=False)
+
+    query = gql(
+        """
+       query (
+        	$name: String
+        	$email: String
+        	$telephoneNumber: String
+        	
+          ) {
+        	users (
+          	name: $name
+          	email: $email
+          	telephoneNumber: $telephoneNumber
+        	) {
+          	id
+          	firstName
+          	lastName
+          	middleName
+          	username
+	}
+  }
+
+        """
+    )
+
+    params = { "name": query_name,  "email": email, "telephoneNumber": phone_number }
 
     try:
-        response = requests.post(url, headers=headers, json=freelancer_data)
+        response = client.execute(query, params)
+        print(f"Response OK when searching people: {response}")
+        return response.get('users', [])
+    except Exception as e:
+        print(f"Exception when searching people: {e}")
+        return []
 
-        if response.status_code == 200:
-            data = response.json()
-            if data.get('verified'):
-                print('Freelancer is verified')
-                return True
-            else:
-                print('Verification failed:', data.get('reason'))
-                return False
-        else:
-            print('Error:', response.status_code, response.text)
-            return False
-    except requests.exceptions.RequestException as e:
-        print('Request failed:', e)
-        return False
+
+
+
+def verify_tnid(freelancer_data):
+    # This function will implement your verification logic.
+    search_results = search_people(api_key, freelancer_data)
+
+    if search_results:
+        for user in search_results:
+            # Check if the returned user's name and email match the freelancer's data
+            if (user['firstName'] == freelancer_data.get('name') or
+                user['lastName'] == freelancer_data.get('name')) and \
+               (user.get('email') == freelancer_data.get('Email')):
+                return True  # Verification successful
+    return False
 
 @app.route('/')
 def index():
@@ -43,20 +82,23 @@ def index():
 def add_freelancer():
     name = request.form.get('name')
     skills = request.form.get('skills')
-    tnid = request.form.get('tnid')
-    
+    email = request.form.get('email')
+    phone = request.form.get('TelephoneNumber')
+
     freelancer_data = {
         'name': name,
-        'tnid': tnid,
-        # Add other necessary fields for verification here
+        'Email': email,
+        'phone': phone
     }
 
-    if verify_tnid(freelancer_data):
+    is_verified = verify_tnid(freelancer_data)
+
+    if is_verified:
         freelancers.append({'name': name, 'skills': skills})
         flash('Freelancer registered successfully!', 'success')
     else:
         flash('Invalid TNID. Please try again.', 'error')
-    
+
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
